@@ -17,6 +17,7 @@ import (
 	core "github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/proxy/freedom"
 	"github.com/xtls/xray-core/proxy/masque"
+	"github.com/xtls/xray-core/proxy/mieru"
 	"github.com/xtls/xray-core/proxy/vless"
 	"github.com/xtls/xray-core/proxy/vless/inbound"
 	"github.com/xtls/xray-core/proxy/vless/outbound"
@@ -54,6 +55,7 @@ var (
 		"vmess":       func() interface{} { return new(VMessOutboundConfig) },
 		"trojan":      func() interface{} { return new(TrojanClientConfig) },
 		"hysteria":    func() interface{} { return new(HysteriaClientConfig) },
+		"mieru":       func() interface{} { return new(MieruConfig) },
 		"masque":      func() interface{} { return new(MasqueClientConfig) },
 		"dns":         func() interface{} { return new(DNSOutboundConfig) },
 		"wireguard":   func() interface{} { return &WireGuardConfig{IsClient: true} },
@@ -395,6 +397,20 @@ func (c *OutboundDetourConfig) Build() (*core.OutboundHandlerConfig, error) {
 	ts, err := rawConfig.(Buildable).Build()
 	if err != nil {
 		return nil, errors.New("failed to build outbound handler for protocol ", c.Protocol).Base(err)
+	}
+	if _, ok := ts.(*mieru.ClientConfig); ok {
+		if c.MuxSettings != nil && c.MuxSettings.Enabled {
+			return nil, errors.New("mieru: Xray mux is unsupported; use native multiplexing in the profile")
+		}
+		if ss := senderSettings.StreamSettings; ss != nil {
+			if ss.ProtocolName != "tcp" || ss.SecurityType != "" || c.StreamSetting.FinalMask != nil ||
+				c.StreamSetting.Address != nil || c.StreamSetting.Port != 0 {
+				return nil, errors.New("mieru: streamSettings only supports raw/TCP with sockopt and no security, masking or address overrides")
+			}
+			if tcp := c.StreamSetting.TCPSettings; tcp != nil && (len(tcp.HeaderConfig) != 0 || tcp.AcceptProxyProtocol) {
+				return nil, errors.New("mieru: TCP headers and proxy protocol are unsupported")
+			}
+		}
 	}
 	if err := validateXDrive(ts, senderSettings.StreamSettings, senderSettings.MultiplexSettings, nil); err != nil {
 		return nil, err

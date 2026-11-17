@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package xray.proxy.mieru;
+option csharp_namespace = "Xray.Proxy.Mieru";
+option go_package = "github.com/xtls/xray-core/proxy/mieru";
+option java_package = "com.xray.proxy.mieru";
+option java_multiple_files = true;
+
+message ClientConfig {
+  // Serialized mieru ClientProfile; independent of the library's descriptor path.
+  bytes profile = 1;
+}
