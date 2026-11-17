@@ -164,6 +164,85 @@ changes are not part of the preview.
   Xray-only image does not replace the Node image. The current upstream Node
   version parser displays only the first three version components.
 
+### Mieru client outbound
+
+proxide supports Mieru v3 through the official
+[`github.com/enfein/mieru/v3`](https://github.com/enfein/mieru) client library.
+This is an outbound protocol, not an Xray transport or a Mieru server inbound.
+TCP and UDP destinations can use TCP or UDP Mieru server port bindings.
+
+```json
+{
+  "outbounds": [
+    {
+      "tag": "mieru",
+      "protocol": "mieru",
+      "settings": {
+        "url": "mierus://username:password@server.example?profile=default&port=2999&protocol=TCP"
+      }
+    }
+  ]
+}
+```
+
+Supply exactly one input in `settings`:
+
+- `url`: an official `mierus://` simple sharing link or `mieru://` encoded
+  client configuration.
+- `profile`: an official Mieru client profile object, including `profileName`,
+  `user` and `servers`.
+- `config`: a full official Mieru client configuration, or an individual
+  `type: "mieru"` node from a Clash/mihomo or Hiddify/sing-box configuration.
+  Full client configurations select `activeProfile`; a single profile can omit
+  it. Their local SOCKS, HTTP and RPC settings do not create listeners in proxide.
+
+For example, an individual Clash node can be supplied as:
+
+```json
+{
+  "protocol": "mieru",
+  "settings": {
+    "config": {
+      "type": "mieru",
+      "server": "server.example",
+      "port": 2999,
+      "transport": "TCP",
+      "username": "username",
+      "password": "password",
+      "udp": true
+    }
+  }
+}
+```
+
+Native profiles and sharing links preserve multiple server port bindings and
+ranges, credentials, MTU, Mieru multiplexing, handshake mode and traffic patterns.
+Use Mieru's own `multiplexing`, not Xray `mux`. Configure routing and socket
+options on the Xray outbound, not in an imported node's dialer fields.
+Use only raw/TCP `streamSettings` without TLS, transport headers, proxy protocol
+or masking; Mieru supplies its own wire protocol. Unknown imported node fields,
+native profile dialers and `udp: false` restrictions are rejected rather than
+silently discarded. Express traffic restrictions in Xray routing.
+
+Subscription envelopes, downloading and profile selection in the client UI
+remain the consumer's responsibility: yaxc must extract each Mieru node or
+sharing link and emit the outbound above. This does not add a subscription
+importer to Xray. In particular, 2s-ui's sing-box JSON export can omit Mieru;
+use its Mieru sharing link or Clash export instead. Panel versions and enabled
+server protocols still determine which nodes are available.
+
+The upstream client can block individual session cleanup behind a stalled shared
+TCP write. Closing the entire outbound closes its physical transports first,
+unblocking session cleanup; individual cancellation cannot interrupt that socket
+without also disrupting other multiplexed sessions.
+
+**Licensing:** the official Mieru library is
+[GPL-3.0-or-later](https://github.com/enfein/mieru/blob/v3.39.0/LICENSE).
+The default CLI links it. Distributing the CLI or an embedded AAR requires
+compliance with the applicable GPL terms for the combined work, including corresponding
+source obligations. Review the consuming application's distribution too;
+the existing MPL-2.0 source notices are not a GPL exception.
+
 [Project X](https://github.com/XTLS) originates from XTLS protocol, providing a set of network tools such as [Xray-core](https://github.com/XTLS/Xray-core) and [REALITY](https://github.com/XTLS/REALITY).
 
 [README](https://github.com/XTLS/Xray-core#readme) is open, so feel free to submit your project [here](https://github.com/XTLS/Xray-core/pulls).
