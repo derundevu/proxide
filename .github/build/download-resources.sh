@@ -5,13 +5,32 @@ mkdir -p resources
 data_commit=$(gh api repos/XTLS/Xray-rules-dat/commits/release --jq .sha)
 [[ "$data_commit" =~ ^[0-9a-f]{40}$ ]]
 download_database() {
-  local entry=$1 destination=$2 checksum hash
-  local url="https://raw.githubusercontent.com/XTLS/Xray-rules-dat/${data_commit}/${entry}.dat"
-  curl --fail --show-error --location "$url" -o "$destination"
-  checksum=$(curl --fail --show-error --location "$url.sha256sum")
-  read -r hash _ <<< "$checksum"
-  [[ "$hash" =~ ^[[:xdigit:]]{64}$ ]]
-  printf '%s  %s\n' "$hash" "$destination" | shasum -a 256 -c
+  local entry=$1 destination=$2 checksum hash base
+  base="https://raw.githubusercontent.com/XTLS/Xray-rules-dat/${data_commit}/${entry}"
+  if curl --fail --silent --show-error --location "${base}.dat" -o "$destination" 2>/dev/null; then
+    checksum=$(curl --fail --show-error --location "${base}.dat.sha256sum")
+    read -r hash _ <<< "$checksum"
+    [[ "$hash" =~ ^[[:xdigit:]]{64}$ ]]
+    printf '%s  %s\n' "$hash" "$destination" | shasum -a 256 -c
+  else
+    # Some databases are published only as .dat.gz on the release branch.
+    local gz
+    gz=$(mktemp)
+    curl --fail --show-error --location "${base}.dat.gz" -o "$gz" || {
+      rm -f "$gz"
+      return 1
+    }
+    checksum=$(curl --fail --show-error --location "${base}.dat.gz.sha256sum")
+    read -r hash _ <<< "$checksum"
+    [[ "$hash" =~ ^[[:xdigit:]]{64}$ ]]
+    printf '%s  %s\n' "$hash" "$gz" | shasum -a 256 -c
+    gunzip -c "$gz" > "$destination"
+    rm -f "$gz"
+    checksum=$(curl --fail --show-error --location "${base}.dat.sha256sum")
+    read -r hash _ <<< "$checksum"
+    [[ "$hash" =~ ^[[:xdigit:]]{64}$ ]]
+    printf '%s  %s\n' "$hash" "$destination" | shasum -a 256 -c
+  fi
   test -s "$destination"
 }
 download_database geoip/geoip-lite resources/geoip.dat
