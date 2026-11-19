@@ -110,3 +110,18 @@ jobs:
             echo 'Invalid configuration unexpectedly accepted' >&2
             exit 1
           fi
+      - name: Build optional Chromium Naive outbound
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          go build -tags with_naive_outbound,with_purego -o smoke-xray-naive.exe ./main
+          ./smoke-xray-naive.exe version
+      - name: Test optional Chromium Naive outbound
+        env:
+          CGO_ENABLED: '0'
+        run: go test -timeout 10m -tags with_naive_outbound,with_purego ./proxy/naive/ ./infra/conf/ ./app/proxyman/outbound/
+      - name: Race test optional Chromium Naive outbound
+        if: runner.os == 'Linux'
+        env:
+          CGO_ENABLED: '1'
+        run: go test -race -timeout 10m -tags with_naive_outbound,with_purego ./proxy/naive/

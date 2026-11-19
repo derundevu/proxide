@@ -17,6 +17,7 @@ import (
 	core "github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/proxy/freedom"
 	"github.com/xtls/xray-core/proxy/masque"
+	"github.com/xtls/xray-core/proxy/naive"
 	"github.com/xtls/xray-core/proxy/vless"
 	"github.com/xtls/xray-core/proxy/vless/inbound"
 	"github.com/xtls/xray-core/proxy/vless/outbound"
@@ -55,6 +56,7 @@ var (
 		"trojan":      func() interface{} { return new(TrojanClientConfig) },
 		"hysteria":    func() interface{} { return new(HysteriaClientConfig) },
 		"masque":      func() interface{} { return new(MasqueClientConfig) },
+		"naive":       func() interface{} { return new(NaiveClientConfig) },
 		"dns":         func() interface{} { return new(DNSOutboundConfig) },
 		"wireguard":   func() interface{} { return &WireGuardConfig{IsClient: true} },
 	}, "protocol", "settings")
@@ -323,6 +325,14 @@ func (c *OutboundDetourConfig) Build() (*core.OutboundHandlerConfig, error) {
 	if c.ProxySettings != nil {
 		return nil, errors.PrintRemovedFeatureError(`outbound "proxySettings"`, `"streamSettings.sockopt.dialerProxy"`)
 	}
+	// The TLS builder discards separator-only pin/name lists; Naive must reject
+	// these unsupported overrides before that normalization.
+	if strings.EqualFold(c.Protocol, "naive") && c.StreamSetting != nil && c.StreamSetting.TLSSettings != nil {
+		tlsSettings := c.StreamSetting.TLSSettings
+		if tlsSettings.PinnedPeerCertSha256 != "" || tlsSettings.VerifyPeerCertByName != "" {
+			return nil, errors.New("naive does not support TLS certificate pinning or verification-name overrides")
+		}
+	}
 
 	senderSettings := &proxyman.SenderConfig{}
 	switch strings.ToLower(c.TargetStrategy) {
@@ -401,6 +411,14 @@ func (c *OutboundDetourConfig) Build() (*core.OutboundHandlerConfig, error) {
 	}
 	if err := validateOutboundTransportSecurity(rawConfig, senderSettings); err != nil {
 		return nil, err
+	}
+	if _, ok := ts.(*naive.ClientConfig); ok {
+		if err := naive.ValidateSender(senderSettings); err != nil {
+			return nil, err
+		}
+		if err := naive.ValidateTransport(senderSettings.StreamSettings, senderSettings.MultiplexSettings); err != nil {
+			return nil, err
+		}
 	}
 
 	if _, ok := ts.(*masque.ClientConfig); !ok && senderSettings.StreamSettings != nil && senderSettings.StreamSettings.ProtocolName == "masque" {

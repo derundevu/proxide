@@ -268,13 +268,29 @@ func (h *Handler) DestIpAddress() net.IP {
 
 // Dial implements internet.Dialer.
 func (h *Handler) Dial(ctx context.Context, dest net.Destination) (stat.Connection, error) {
+	return h.dial(ctx, dest, h.streamSettings)
+}
+
+// DialRaw preserves outbound routing and accounting while leaving TLS to the
+// proxy protocol, such as Naive's Chromium stack.
+func (h *Handler) DialRaw(ctx context.Context, dest net.Destination) (stat.Connection, error) {
+	if h.streamSettings == nil {
+		return h.dial(ctx, dest, nil)
+	}
+	settings := *h.streamSettings
+	settings.SecurityType = ""
+	settings.SecuritySettings = nil
+	return h.dial(ctx, dest, &settings)
+}
+
+func (h *Handler) dial(ctx context.Context, dest net.Destination, settings *internet.MemoryStreamConfig) (stat.Connection, error) {
 	if h.senderSettings != nil && h.senderSettings.Via != nil {
 		outbounds := session.OutboundsFromContext(ctx)
 		ob := outbounds[len(outbounds)-1]
 		h.SetOutboundGateway(ctx, ob)
 	}
 
-	conn, err := internet.Dial(ctx, dest, h.streamSettings)
+	conn, err := internet.Dial(ctx, dest, settings)
 	if conn != nil && session.CancellationPropagationFromContext(ctx) {
 		// Bind only per-probe connections. Shared mux workers use their own
 		// unmarked context, so canceling a probe cannot close their transport.

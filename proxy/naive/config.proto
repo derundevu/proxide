@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package xray.proxy.naive;
+option go_package = "github.com/xtls/xray-core/proxy/naive";
+
+import "common/net/address.proto";
+
+message ClientConfig {
+  xray.common.net.IPOrDomain address = 1;
+  uint32 port = 2;
+  string username = 3;
+  string password = 4;
+  uint32 level = 5;
+  bool quic = 6;
+  map<string, string> headers = 7;
+  bool udp_over_tcp = 8;
+}
