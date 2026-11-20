@@ -144,6 +144,7 @@ func loadRoots(config *tls.Config) (string, error) {
 	}
 	return roots.String(), nil
 }
+
 func congestionControl(value string) cronet.QUICCongestionControl {
 	switch value {
 	case "bbr":
