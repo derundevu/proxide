@@ -144,6 +144,20 @@ func loadRoots(config *tls.Config) (string, error) {
 	}
 	return roots.String(), nil
 }
+func congestionControl(value string) cronet.QUICCongestionControl {
+	switch value {
+	case "bbr":
+		return cronet.QUICCongestionControlBBR
+	case "bbr2":
+		return cronet.QUICCongestionControlBBRv2
+	case "cubic":
+		return cronet.QUICCongestionControlCubic
+	case "reno":
+		return cronet.QUICCongestionControlReno
+	default:
+		return cronet.QUICCongestionControlDefault
+	}
+}
 
 // open serializes native stream creation against engine shutdown. Only stream
 // creation is locked; handshakes and all stream I/O remain concurrent.
@@ -180,6 +194,7 @@ func (c *Client) open(ctx context.Context, destination M.Socksaddr, dialer inter
 			DNSResolver:             c.resolveDNS,
 			Dialer:                  adapter,
 			QUIC:                    c.config.Quic,
+			QUICCongestionControl:   congestionControl(c.config.QuicCongestionControl),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("naive: initialize Chromium: %w", err)

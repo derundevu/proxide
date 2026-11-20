@@ -9,8 +9,8 @@ Normal builds and release archives do not enable this package.
 ## Licensing
 
 Enabling this feature links GPL-3.0-or-later components: the `cronet-go` Go
-bindings are compiled into the binary and the native `libcronet` is loaded at
-runtime. A Naive-enabled binary is therefore a GPLv3 combined work. Distributing
+bindings are compiled into the binary; native `libcronet` is linked statically
+or loaded at runtime according to the build mode. A Naive-enabled binary is a GPLv3 combined work. Distributing
 one requires GPLv3 compliance while the original Xray MPL-2.0 notices remain in
 place. The opt-in does not relicense other source files and does not affect
 ordinary builds. See the repository `LICENSE` and the `cronet-go` license for the
@@ -75,6 +75,9 @@ outbound is instantiated.
 - `address` and `port` are required. `quic: false` uses HTTP/2 over TCP;
   `quic: true` uses HTTP/3 over UDP to the proxy. Chromium owns authentication,
   Naive padding and stream multiplexing.
+- With `quic: true`, optional `quicCongestionControl` selects `bbr`, `bbr2`,
+  `cubic` or `reno`. Omission retains Chromium's default. An unknown value or
+  specifying an algorithm without QUIC is rejected.
 - UDP destinations require `udpOverTcp: true` and a server supporting sing
   UoT v2. HTTP/3 alone does not enable UDP destinations.
 - Proxy addresses are resolved by Xray DNS, respecting

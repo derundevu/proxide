@@ -14,4 +14,5 @@ message ClientConfig {
   bool quic = 6;
   map<string, string> headers = 7;
   bool udp_over_tcp = 8;
+  string quic_congestion_control = 9;
 }

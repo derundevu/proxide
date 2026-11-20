@@ -23,6 +23,8 @@ func TestNaiveClientConfig(t *testing.T) {
 		{"overflow port", `{"address":"example.com","port":65536}`},
 		{"negative port", `{"address":"example.com","port":-1}`},
 		{"colon in username", `{"address":"example.com","port":443,"user":"alice:admin"}`},
+		{"unknown QUIC congestion control", `{"address":"example.com","port":443,"quic":true,"quicCongestionControl":"unknown"}`},
+		{"QUIC congestion control without QUIC", `{"address":"example.com","port":443,"quicCongestionControl":"bbr"}`},
 		{"invalid header token", `{"address":"example.com","port":443,"headers":{"Bad Name":"value"}}`},
 		{"header name injection", `{"address":"example.com","port":443,"headers":{"X-Test\r\nInjected":"value"}}`},
 		{"header value injection", `{"address":"example.com","port":443,"headers":{"X-Test":"value\r\nInjected: yes"}}`},

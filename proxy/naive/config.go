@@ -37,6 +37,15 @@ func ValidateClientConfig(config *ClientConfig) error {
 	if config.Port == 0 || config.Port > 65535 {
 		return fmt.Errorf("naive: port must be between 1 and 65535")
 	}
+	switch config.QuicCongestionControl {
+	case "":
+	case "bbr", "bbr2", "cubic", "reno":
+		if !config.Quic {
+			return fmt.Errorf("naive: quicCongestionControl requires quic")
+		}
+	default:
+		return fmt.Errorf("naive: unsupported quicCongestionControl %q", config.QuicCongestionControl)
+	}
 	if strings.Contains(config.Username, ":") {
 		return fmt.Errorf("naive: username must not contain a colon")
 	}
